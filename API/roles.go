@@ -1,14 +1,20 @@
-package API
+package api
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/lib/pq"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 type Role struct {
-	Id   int    `gorm:"column:id;not null;type:integer"`
-	Name string `gorm:"column:name;not null;type:text"`
+	Id         int            `gorm:"column:id;not null;type:integer"`
+	Name       string         `gorm:"column:name;not null;type:text"`
+	RolId      int            `gorm:"column:role_id;not null;type:integer"`
+	AllowPaths pq.StringArray `gorm:"column:allowe_paths;type:text[]"`
 }
 
 func (a *API) GetRoles(w http.ResponseWriter, r *http.Request) {
@@ -123,4 +129,18 @@ func (a *API) DeleteRoles(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("BAD REQUEST: delete query error"))
 	}
+}
+
+func (a *API) GetRoleFromRoleId(roleId int) (Role, error) {
+	var err error
+	var roleTmp Role
+
+	err = a.Db.Raw("SELECT * FROM roles WHERE role_id = " + strconv.Itoa(roleId)).Scan(&roleTmp).Error
+	if err != nil {
+		fmt.Println("24")
+		a.Log.Error("Delete query error! Query: ")
+		return roleTmp, errors.New("Delete connection from db error")
+	}
+
+	return roleTmp, nil
 }

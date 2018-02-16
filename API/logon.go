@@ -1,11 +1,10 @@
-package API
+package api
 
 import (
 	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"time"
-	"os/user"
 )
 
 func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +43,13 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	existConn, err := a.GetConnectionFromId(user.Id)
+	if err == nil && existConn.Id != 0 {
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte(existConn.Token))
+		return
+	}
+
 	var conn Connection
 	genTime := time.Now()
 
@@ -51,13 +57,6 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 	conn.RoleId = user.RoleId
 	conn.GenerateDate = genTime
 	conn.Token = GetToken(user.Login, genTime)
-
-	existConn, err := a.GetConnection(conn.Token)
-	if err != nil && existConn.Id != 0 {
-		w.WriteHeader(http.StatusAccepted)
-		w.Write([]byte(existConn.Token))
-		return
-	}
 
 	err = a.InsertConnection(conn)
 	if err != nil {
@@ -72,13 +71,6 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) LogonHandler(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		/*
-				ПРИНИМАЮ TOKEN
-			if token exist than get role_id
-		*/
-
-		/*if role_id cool for func -> run else error response
-		 */
 		var err error
 
 		err = UniversalParseForm(&w, r)
@@ -94,18 +86,22 @@ func (a *API) LogonHandler(next http.Handler) http.Handler {
 		if err != nil {
 			a.Log.Error("Inernal problems: func LogonHandler")
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Inernal problems"))
+			w.Write([]byte("Incorrect user"))
+			return
 		}
 
-		if conn.GenerateDate.Minute()-time.Now().Minute() < -10 {
-			var user User
-			err = a.Db.Raw("SELECT * FROM users WHERE id = " + string(conn.UserId)).Scan(&user).Error
-			if err != nil{
+		if (conn.GenerateDate.Unix()-(time.Now().Unix()+7200))/60 < -10 {
+			/*var user User
+			err = a.Db.Raw("SELECT * FROM users WHERE id = " + strconv.Itoa(conn.UserId)).Scan(&user).Error
+			if err != nil {
+				fmt.Println(err, conn.UserId)
 				a.Log.Error("Inernal problems: func LogonHandler | query from users table")
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte("Inernal problems"))
+				return
 			}
 
+			fmt.Println("1")
 			genTime := time.Now()
 
 			conn.UserId = user.Id
@@ -114,14 +110,51 @@ func (a *API) LogonHandler(next http.Handler) http.Handler {
 			conn.Token = GetToken(user.Login, genTime)
 
 			err = a.UpdateConnection(conn)
-			if err != nil{
+			if err != nil {
 				a.Log.Error("Inernal problems: func LogonHandler | query update in connections")
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte("Inernal problems"))
+				return
+			}*/
+			err = a.DeleteConnection(conn.Token)
+			if err != nil {
+				a.Log.Error(err.Error())
+			}
+
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Session TimeOut"))
+			return
+		}
+
+		conn.GenerateDate = time.Now()
+		err = a.UpdateConnection(conn)
+		if err != nil {
+			a.Log.Error("update token time error")
+		}
+
+		role, err := a.GetRoleFromRoleId(conn.RoleId)
+		if err != nil {
+			a.Log.Error(err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Access Denied"))
+			return
+		}
+
+		var accessOk bool
+		for _, strRole := range role.AllowPaths {
+			if strRole == r.URL.Path {
+				accessOk = true
+				break
 			}
 		}
 
-		...
+		if !accessOk {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Access Denied"))
+			return
+		}
+
+		next.ServeHTTP(w, r)
 	}
 
 	return http.HandlerFunc(fn)

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./API"
+	"./api"
 	"./wrappers"
 	"fmt"
 	"github.com/jcelliott/lumber"
@@ -14,14 +14,12 @@ import (
 func main() {
 	var err error
 
-	var mainAPI API.API
+	var mainAPI api.API
 
 	loger, err := lumber.NewRotateLogger("log_"+time.Now().Format("2006-01-02")+".log", 10000, 10)
 	if err != nil {
 		panic("failed to setup loger")
 	}
-
-	mainAPI.Log = loger
 
 	db, err := gorm.Open("postgres", "host=localhost port=5433 user=admin dbname=GOLibrary sslmode=disable password=12344321Qw5")
 	if err != nil {
@@ -29,7 +27,7 @@ func main() {
 		panic("Failed to create database connection")
 	}
 
-	mainAPI.Db = db
+	mainAPI.New(db, loger)
 
 	defer db.Close()
 

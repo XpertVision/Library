@@ -30,6 +30,7 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 
 	query := "SELECT * FROM users WHERE " + whereString
 
+	//Search user in db
 	err = a.Db.Raw(query).Scan(&user).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -37,12 +38,14 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//If wrong user
 	if user.Id == 0 {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("Wrong Login or Password"))
 		return
 	}
 
+	//Return token if exist for this user
 	existConn, err := a.GetConnectionFromId(user.Id)
 	if err == nil && existConn.Id != 0 {
 		w.WriteHeader(http.StatusAccepted)
@@ -58,6 +61,7 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 	conn.GenerateDate = genTime
 	conn.Token = GetToken(user.Login, genTime)
 
+	//Loginig user
 	err = a.InsertConnection(conn)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -65,6 +69,7 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//return token
 	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte(conn.Token))
 }
@@ -82,6 +87,7 @@ func (a *API) LogonHandler(next http.Handler) http.Handler {
 		var conn Connection
 		token := r.FormValue("token")
 
+		//If invalid token
 		err = a.Db.Raw("SELECT * FROM connections WHERE token = '" + token + "'").Scan(&conn).Error
 		if err != nil {
 			a.Log.Error("Inernal problems: func LogonHandler")
@@ -90,32 +96,8 @@ func (a *API) LogonHandler(next http.Handler) http.Handler {
 			return
 		}
 
+		//If token too old
 		if (conn.GenerateDate.Unix()-(time.Now().Unix()+7200))/60 < -10 {
-			/*var user User
-			err = a.Db.Raw("SELECT * FROM users WHERE id = " + strconv.Itoa(conn.UserId)).Scan(&user).Error
-			if err != nil {
-				fmt.Println(err, conn.UserId)
-				a.Log.Error("Inernal problems: func LogonHandler | query from users table")
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Inernal problems"))
-				return
-			}
-
-			fmt.Println("1")
-			genTime := time.Now()
-
-			conn.UserId = user.Id
-			conn.RoleId = user.RoleId
-			conn.GenerateDate = genTime
-			conn.Token = GetToken(user.Login, genTime)
-
-			err = a.UpdateConnection(conn)
-			if err != nil {
-				a.Log.Error("Inernal problems: func LogonHandler | query update in connections")
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Inernal problems"))
-				return
-			}*/
 			err = a.DeleteConnection(conn.Token)
 			if err != nil {
 				a.Log.Error(err.Error())
@@ -126,12 +108,14 @@ func (a *API) LogonHandler(next http.Handler) http.Handler {
 			return
 		}
 
+		//If all ok with token, update his generate date
 		conn.GenerateDate = time.Now()
 		err = a.UpdateConnection(conn)
 		if err != nil {
 			a.Log.Error("update token time error")
 		}
 
+		//Finding role_id
 		role, err := a.GetRoleFromRoleId(conn.RoleId)
 		if err != nil {
 			a.Log.Error(err.Error())
@@ -140,20 +124,23 @@ func (a *API) LogonHandler(next http.Handler) http.Handler {
 			return
 		}
 
+		//Knowing access rule for user anf compare with target-function
 		var accessOk bool
-		for _, strRole := range role.AllowPaths {
+		for _, strRole := range role.AllowePaths {
 			if strRole == r.URL.Path {
 				accessOk = true
 				break
 			}
 		}
 
+		//If access role incorrect for this target-func
 		if !accessOk {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Access Denied"))
 			return
 		}
 
+		//Call target-function
 		next.ServeHTTP(w, r)
 	}
 

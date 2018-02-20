@@ -11,10 +11,11 @@ import (
 )
 
 type Role struct {
-	Id         int            `gorm:"column:id;not null;type:integer"`
-	Name       string         `gorm:"column:name;not null;type:text"`
-	RolId      int            `gorm:"column:role_id;not null;type:integer"`
-	AllowPaths pq.StringArray `gorm:"column:allowe_paths;type:text[]"`
+	Id          int            `gorm:"column:id;not null;type:integer"`
+	Name        string         `gorm:"column:name;not null;type:text"`
+	RoleId      int            `gorm:"column:role_id;not null;type:integer"`
+	AllowePaths pq.StringArray `gorm:"column:allowe_paths;type:text[]"`
+	Deleted     time.Time      `gorm:"column:deleted;type:date;default:''"`
 }
 
 func (a *API) GetRoles(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +38,7 @@ func (a *API) GetRoles(w http.ResponseWriter, r *http.Request) {
 
 	WhereBlock("deleted", "NULL", &whereString)
 
-	query := "SELECT * FROM books WHERE " + whereString
+	query := "SELECT * FROM roles WHERE " + whereString
 
 	err = a.Db.Raw(query).Scan(&roles).Error
 	if err != nil {
@@ -75,7 +76,7 @@ func (a *API) UpdateRoles(w http.ResponseWriter, r *http.Request) {
 	val := r.FormValue("name")
 	SetBlock("name", val, &setString, true)
 
-	query := "UPDATE books SET " + setString + " WHERE " + whereString
+	query := "UPDATE roles SET " + setString + " WHERE " + whereString
 
 	err = a.Db.Exec(query).Error
 	if err != nil {
@@ -97,6 +98,18 @@ func (a *API) InsertRoles(w http.ResponseWriter, r *http.Request) {
 	var tmpRoles Role
 
 	tmpRoles.Name = r.FormValue("name")
+
+	tmpAllowePaths := r.FormValue("allowe_paths")
+	tmpRoles.AllowePaths.Scan(tmpAllowePaths)
+
+	role, err := strconv.Atoi(r.FormValue("role_id"))
+	if err != nil {
+		a.Log.Error("Convert role_id error")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal problems"))
+		return
+	}
+	tmpRoles.RoleId = role
 
 	err = a.Db.Create(&tmpRoles).Error
 	if err != nil {

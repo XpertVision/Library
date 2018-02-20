@@ -10,21 +10,21 @@ func HandleAll(api *api.API) {
 	http.HandleFunc("/logon", api.LogOn)
 
 	wrapper := alice.New(api.LogonHandler)
+
 	http.Handle("/getBooks", wrapper.ThenFunc(api.GetBooks))
-	//http.HandleFunc("/getBooks", api.GetBooks)
-	http.HandleFunc("/getRoles", api.GetRoles)
-	http.HandleFunc("/getUsers", api.GetUsers)
+	http.Handle("/getRoles", wrapper.ThenFunc(api.GetRoles))
+	http.Handle("/getUsers", wrapper.ThenFunc(api.GetUsers))
 
-	http.HandleFunc("/updateUsers", api.UpdateUsers)
-	http.HandleFunc("/updateRoles", api.UpdateRoles)
-	http.HandleFunc("/updateBooks", api.UpdateBooks)
+	http.Handle("/updateUsers", wrapper.ThenFunc(api.UpdateUsers))
+	http.Handle("/updateRoles", wrapper.ThenFunc(api.UpdateRoles))
+	http.Handle("/updateBooks", wrapper.ThenFunc(api.UpdateBooks))
 
-	http.HandleFunc("/insertBooks", api.InsertBooks)
-	http.HandleFunc("/insertUsers", api.InsertUsers)
-	http.HandleFunc("/insertRoles", api.InsertRoles)
+	http.Handle("/insertBooks", wrapper.ThenFunc(api.InsertBooks))
+	http.Handle("/insertUsers", wrapper.ThenFunc(api.InsertUsers))
+	http.Handle("/insertRoles", wrapper.ThenFunc(api.InsertRoles))
 
-	http.HandleFunc("/deleteRoles", api.DeleteRoles)
-	http.HandleFunc("/deleteBooks", api.DeletetBooks)
-	http.HandleFunc("/deleteUsers", api.DeletetUsers)
+	http.Handle("/deleteRoles", wrapper.ThenFunc(api.DeleteRoles))
+	http.Handle("/deleteBooks", wrapper.ThenFunc(api.DeletetBooks))
+	http.Handle("/deleteUsers", wrapper.ThenFunc(api.DeletetUsers))
 
 }

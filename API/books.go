@@ -127,7 +127,7 @@ func (a *API) InsertBooks(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("BAD REQUEST: Insert query error | Query: "))
 	}
 }
-func (a *API) DeletetBooks(w http.ResponseWriter, r *http.Request) {
+func (a *API) DeleteBooks(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	err = UniversalParseForm(&w, r)

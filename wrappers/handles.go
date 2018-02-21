@@ -24,7 +24,7 @@ func HandleAll(api *api.API) {
 	http.Handle("/insertRoles", wrapper.ThenFunc(api.InsertRoles))
 
 	http.Handle("/deleteRoles", wrapper.ThenFunc(api.DeleteRoles))
-	http.Handle("/deleteBooks", wrapper.ThenFunc(api.DeletetBooks))
-	http.Handle("/deleteUsers", wrapper.ThenFunc(api.DeletetUsers))
+	http.Handle("/deleteBooks", wrapper.ThenFunc(api.DeleteBooks))
+	http.Handle("/deleteUsers", wrapper.ThenFunc(api.DeleteUsers))
 
 }

@@ -95,15 +95,17 @@ func (a *API) UpdateUsers(w http.ResponseWriter, r *http.Request) {
 	val = r.FormValue("role_id")
 	SetBlock("role_id", val, &setString, false)
 
-	val = r.FormValue("password")
-	passHash := sha256.Sum256([]byte(val))
-	SetBlock("password", string(passHash[:]), &setString, true)
+	val = r.FormValue("login")
+	SetBlock("login", val, &setString, true)
+
+	tmpPassHash := sha256.Sum256([]byte(r.FormValue("password")))
+	tmpPasswordStr := string(tmpPassHash[:])
+	tmpPasword := fmt.Sprintf("%x", tmpPasswordStr)
+	SetBlock("password", tmpPasword, &setString, true)
 
 	SetBlock("updated", time.Now().Format("2006-01-02"), &setString, true)
 
 	query := "UPDATE users SET " + setString + " WHERE " + whereString
-
-	fmt.Println(query)
 
 	err = a.Db.Exec(query).Error
 	if err != nil {
@@ -137,10 +139,10 @@ func (a *API) InsertUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tmpUsers.Login = r.FormValue("login")
+
 	tmpPassHash := sha256.Sum256([]byte(r.FormValue("password")))
 	tmpUsers.Password = string(tmpPassHash[:])
-	fmt.Println(tmpUsers.Password)
-	fmt.Printf("%x", tmpUsers.Password)
 	tmpUsers.Password = fmt.Sprintf("%x", tmpUsers.Password)
 
 	tmpUsers.Created = time.Now()
@@ -151,10 +153,9 @@ func (a *API) InsertUsers(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("BAD REQUEST: Insert query error | Query: "))
 	}
-	fmt.Println(tmpUsers)
 }
 
-func (a *API) DeletetUsers(w http.ResponseWriter, r *http.Request) {
+func (a *API) DeleteUsers(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	err = UniversalParseForm(&w, r)

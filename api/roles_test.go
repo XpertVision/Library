@@ -3,35 +3,22 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/jcelliott/lumber"
-	"github.com/jinzhu/gorm"
 	"github.com/lib/pq"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strconv"
 	"testing"
-	"time"
 )
 
 func TestGetRoles(t *testing.T) {
 	var err error
-
-	loger, err := lumber.NewRotateLogger("log_"+time.Now().Format("2006-01-02")+".log", 10000, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	db, err := gorm.Open("postgres", "host=localhost port=5433 user=admin dbname=GOLibrary sslmode=disable password=12344321Qw5")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	testApi.Db = db
-	testApi.Log = loger
-
 	var roleArrayFirst, roleArrayLast []Role
-	db.Raw("SELECT * FROM roles WHERE deleted IS NULL").Scan(&roleArrayFirst)
+
+	initApi(&testApi, t)
+	defer testApi.Db.Close()
+
+	testApi.Db.Raw("SELECT * FROM roles WHERE deleted IS NULL").Scan(&roleArrayFirst)
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/getRoles", nil)
@@ -41,7 +28,7 @@ func TestGetRoles(t *testing.T) {
 
 	testApi.GetRoles(w, r)
 	if w.Code != http.StatusOK {
-		t.Fatal(http.StatusOK, w.Code)
+		t.Fatal(w.Code)
 	}
 
 	firstBytes, err := json.Marshal(roleArrayFirst)
@@ -62,19 +49,8 @@ func TestInsertRoles(t *testing.T) {
 	var roleFromDb []Role
 	var tmpAllowePaths pq.StringArray
 
-	loger, err := lumber.NewRotateLogger("log_"+time.Now().Format("2006-01-02")+".log", 10000, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	db, err := gorm.Open("postgres", "host=localhost port=5433 user=admin dbname=GOLibrary sslmode=disable password=12344321Qw5")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	testApi.Db = db
-	testApi.Log = loger
+	initApi(&testApi, t)
+	defer testApi.Db.Close()
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertRoles?name=TEST&role_id=777&allowe_paths={/TEST1,/TEST2,/TEST3}", nil)
@@ -84,7 +60,7 @@ func TestInsertRoles(t *testing.T) {
 
 	testApi.InsertRoles(w, r)
 	if w.Code != http.StatusOK {
-		t.Fatal(http.StatusOK, w.Code)
+		t.Fatal(w.Code)
 	}
 
 	testApi.Db.Raw("SELECT * FROM roles WHERE name = 'TEST' AND role_id = 777 AND deleted IS NULL").Scan(&roleFromDb)
@@ -101,6 +77,10 @@ func TestInsertRoles(t *testing.T) {
 		t.Error("Wrong name")
 	}
 
+	if roleFromDb[0].Created.IsZero() {
+		t.Error("Wrong creat time")
+	}
+
 	tmpAllowePathsStr := "{/TEST1,/TEST2,/TEST3}"
 	tmpAllowePaths.Scan(tmpAllowePathsStr)
 
@@ -109,4 +89,134 @@ func TestInsertRoles(t *testing.T) {
 	}
 
 	testApi.Db.Exec("DELETE FROM roles WHERE name = 'TEST' AND role_id = 777")
+}
+
+func TestDeleteRoles(t *testing.T) {
+	var err error
+	var rolesFromDb []Role
+
+	initApi(&testApi, t)
+	defer testApi.Db.Close()
+
+	w := httptest.NewRecorder()
+	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertRoles?name=TEST&role_id=777&allowe_paths={/TEST1,/TEST2,/TEST3}", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testApi.InsertRoles(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatal(w.Code)
+	}
+
+	testApi.Db.Raw("SELECT * FROM roles WHERE role_id=777 AND deleted IS NULL").Scan(&rolesFromDb)
+	if cap(rolesFromDb) != 1 {
+		t.Error("row didn't insert")
+	}
+
+	w = httptest.NewRecorder()
+	r, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/deleteRoles?id="+strconv.Itoa(rolesFromDb[0].Id)+"", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testApi.DeleteRoles(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatal(w.Code)
+	}
+
+	testApi.Db.Raw("SELECT * FROM roles WHERE role_id=777 AND deleted NOTNULL").Scan(&rolesFromDb)
+	if cap(rolesFromDb) != 1 {
+		t.Error("row didn't delete")
+	}
+
+	testApi.Db.Exec("DELETE FROM roles WHERE role_id=777 AND deleted NOTNULL")
+}
+
+func TestUpdateRoles(t *testing.T) {
+	var err error
+	var rolesFromDb []Role
+
+	initApi(&testApi, t)
+	defer testApi.Db.Close()
+
+	w := httptest.NewRecorder()
+	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertRoles?name=TEST&role_id=777&allow_paths={/TEST1,/TEST2,/TEST3}", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testApi.InsertRoles(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatal(w.Code)
+	}
+
+	testApi.Db.Raw("SELECT * FROM roles WHERE role_id=777 AND deleted IS NULL").Scan(&rolesFromDb)
+	if cap(rolesFromDb) != 1 {
+		t.Error("row didn't insert")
+	}
+
+	w = httptest.NewRecorder()
+	r, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/updateRoles?id="+strconv.Itoa(rolesFromDb[0].Id)+"&name=ROLEN&allowe_paths={/p1,/p2,/p3,/p4}&role_id=888", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testApi.UpdateRoles(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatal(w.Code)
+	}
+
+	testApi.Db.Raw("SELECT * FROM roles WHERE id=" + strconv.Itoa(rolesFromDb[0].Id) + " AND updated NOTNULL").Scan(&rolesFromDb)
+	if cap(rolesFromDb) != 1 {
+		t.Error("row didn't update")
+	}
+
+	if rolesFromDb[0].Name != "ROLEN" {
+		t.Error("Wrong updated name")
+	}
+
+	var tmpAllowePaths pq.StringArray
+	tmpAllowePathsStr := "{/p1,/p2,/p3,/p4}"
+	tmpAllowePaths.Scan(tmpAllowePathsStr)
+
+	if !reflect.DeepEqual(rolesFromDb[0].AllowePaths, tmpAllowePaths) {
+		t.Error("Wrong allowe_paths")
+	}
+
+	if rolesFromDb[0].RoleId != 888 {
+		t.Error("Wrong updated role_id")
+	}
+
+	if rolesFromDb[0].Updated.IsZero() {
+		t.Error("wrong updated updated")
+	}
+
+	testApi.Db.Exec("DELETE FROM roles WHERE id = " + strconv.Itoa(rolesFromDb[0].Id) + " AND updated NOTNULL")
+}
+
+func TestGetRoleFromId(t *testing.T) {
+	var err error
+	var rolesFromDb Role
+
+	initApi(&testApi, t)
+	defer testApi.Db.Close()
+
+	w := httptest.NewRecorder()
+	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertRoles?name=TEST&role_id=777&allow_paths={/TEST1,/TEST2,/TEST3}", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testApi.InsertRoles(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatal(w.Code)
+	}
+
+	rolesFromDb, err = testApi.GetRoleFromRoleId(777)
+	if rolesFromDb.Name != "TEST" {
+		t.Error("Wrong Name, bad result")
+	}
+
+	testApi.Db.Exec("DELETE FROM roles WHERE role_id = 777")
 }

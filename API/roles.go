@@ -16,6 +16,8 @@ type Role struct {
 	RoleId      int            `gorm:"column:role_id;not null;type:integer"`
 	AllowePaths pq.StringArray `gorm:"column:allowe_paths;type:text[]"`
 	Deleted     time.Time      `gorm:"column:deleted;type:date;default:''"`
+	Updated     time.Time      `gorm:"column:updated;type:date;default:''"`
+	Created     time.Time      `gorm:"column:created;type:date;default:''"`
 }
 
 func (a *API) GetRoles(w http.ResponseWriter, r *http.Request) {
@@ -35,6 +37,9 @@ func (a *API) GetRoles(w http.ResponseWriter, r *http.Request) {
 
 	name := r.FormValue("name")
 	WhereBlock("name", name, &whereString)
+
+	roleId := r.FormValue("role_id")
+	WhereBlock("role_id", roleId, &whereString)
 
 	WhereBlock("deleted", "NULL", &whereString)
 
@@ -76,6 +81,14 @@ func (a *API) UpdateRoles(w http.ResponseWriter, r *http.Request) {
 	val := r.FormValue("name")
 	SetBlock("name", val, &setString, true)
 
+	val = r.FormValue("role_id")
+	SetBlock("role_id", val, &setString, false)
+
+	val = r.FormValue("allowe_paths")
+	SetBlock("allowe_paths", val, &setString, true)
+
+	SetBlock("updated", time.Now().Format("2006-01-02"), &setString, true)
+
 	query := "UPDATE roles SET " + setString + " WHERE " + whereString
 
 	err = a.Db.Exec(query).Error
@@ -110,6 +123,8 @@ func (a *API) InsertRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tmpRoles.RoleId = role
+
+	tmpRoles.Created = time.Now()
 
 	err = a.Db.Create(&tmpRoles).Error
 	if err != nil {

@@ -33,7 +33,7 @@ func (a *API) GetConnectionFromId(userId int) (Connection, error) {
 	var err error
 	var conn Connection
 
-	query := "SELECT * FROM connections WHERE user_id = '" + strconv.Itoa(userId) + "'"
+	query := "SELECT * FROM connections WHERE user_id = " + strconv.Itoa(userId) + ""
 
 	err = a.Db.Raw(query).Scan(&conn).Error
 	if err != nil {
@@ -63,6 +63,8 @@ func (a *API) UpdateConnection(conn Connection) error {
 	var setString string
 
 	SetBlock("token", conn.Token, &setString, true)
+	SetBlock("role_id", strconv.Itoa(conn.RoleId), &setString, false)
+	SetBlock("user_id", strconv.Itoa(conn.UserId), &setString, false)
 	SetBlock("generate_date", conn.GenerateDate.Format("2006-01-02 15:04:05"), &setString, true)
 	WhereBlock("id", strconv.Itoa(conn.Id), &whereString)
 

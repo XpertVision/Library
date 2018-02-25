@@ -1,14 +1,16 @@
 package main
 
 import (
-	"./api"
-	"./wrappers"
+	//"./api"
+	"api"
+	//"./wrappers"
 	"fmt"
 	"github.com/jcelliott/lumber"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"time"
+	"wrappers"
 )
 
 func main() {

@@ -25,36 +25,30 @@ type User struct {
 func (a *API) GetUsers(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
-
 	var users []User
-	var whereString string
+	var userTmp User
 
 	id := r.FormValue("id")
-	WhereBlock("id", id, &whereString)
+	userTmp.Id, err = strconv.Atoi(id)
+	if err != nil {
+		a.Log.Error("problem with convert string to int")
+	}
 
-	fName := r.FormValue("first_name")
-	WhereBlock("first_name", fName, &whereString)
+	userTmp.FirstName = r.FormValue("first_name")
 
-	sName := r.FormValue("second_name")
-	WhereBlock("second_name", sName, &whereString)
+	userTmp.SecondName = r.FormValue("second_name")
 
 	rId := r.FormValue("role_id")
-	WhereBlock("role_id", rId, &whereString)
-
-	WhereBlock("deleted", "NULL", &whereString)
-
-	query := "SELECT * FROM users WHERE " + whereString
-
-	err = a.Db.Raw(query).Scan(&users).Error
+	userTmp.RoleId, err = strconv.Atoi(rId)
 	if err != nil {
-		a.Log.Error("Get query error | Query: " + query)
+		a.Log.Error("problem with convert string to int")
+	}
+
+	err = a.Db.Where(&userTmp).Find(&users).Error
+	if err != nil {
+		a.Log.Error("Get query error | Query: ")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: Get query error | Query: " + query))
+		w.Write([]byte("BAD REQUEST: Get query error"))
 		return
 	}
 
@@ -64,65 +58,51 @@ func (a *API) GetUsers(w http.ResponseWriter, r *http.Request) {
 func (a *API) UpdateUsers(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
-
+	var userTmp User
 	id := r.FormValue("id")
-	if id == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("BAD REQUEST: empty id"))
-		return
+	userTmp.Id, err = strconv.Atoi(id)
+	if err != nil {
+		a.Log.Error("problem with convert string to int")
 	}
 
-	var whereString string
-	var setString string
+	userTmp.FirstName = r.FormValue("first_name")
 
-	WhereBlock("id", id, &whereString)
-	WhereBlock("deleted", "NULL", &whereString)
+	userTmp.SecondName = r.FormValue("second_name")
 
-	val := r.FormValue("first_name")
-	SetBlock("first_name", val, &setString, true)
-
-	val = r.FormValue("second_name")
-	SetBlock("second_name", val, &setString, true)
-
-	val = r.FormValue("date_of_birth")
-	SetBlock("date_of_birth", val, &setString, true)
-
-	val = r.FormValue("role_id")
-	SetBlock("role_id", val, &setString, false)
-
-	val = r.FormValue("login")
-	SetBlock("login", val, &setString, true)
-
-	tmpPassHash := sha256.Sum256([]byte(r.FormValue("password")))
-	tmpPasswordStr := string(tmpPassHash[:])
-	tmpPasword := fmt.Sprintf("%x", tmpPasswordStr)
-	SetBlock("password", tmpPasword, &setString, true)
-
-	SetBlock("updated", time.Now().Format("2006-01-02"), &setString, true)
-
-	query := "UPDATE users SET " + setString + " WHERE " + whereString
-
-	err = a.Db.Exec(query).Error
+	dofBTmp := r.FormValue("date_of_birth")
+	userTmp.DateOfBirth, err = time.Parse("2006-01-02", dofBTmp)
 	if err != nil {
-		a.Log.Error("update query error | Query: " + query)
+		a.Log.Error("problem with convert string to time.time")
+	}
+
+	rId := r.FormValue("role_id")
+	userTmp.RoleId, err = strconv.Atoi(rId)
+	if err != nil {
+		a.Log.Error("problem with convert string to int")
+	}
+
+	userTmp.Login = r.FormValue("login")
+
+	passFromForm := r.FormValue("password")
+	if passFromForm != "" {
+		tmpPassHash := sha256.Sum256([]byte(r.FormValue("password")))
+		tmpPasswordStr := string(tmpPassHash[:])
+		tmpPasword := fmt.Sprintf("%x", tmpPasswordStr)
+		userTmp.Password = tmpPasword
+	}
+
+	userTmp.Updated = time.Now()
+
+	err = a.Db.Model(&userTmp).Updates(userTmp).Error
+	if err != nil {
+		a.Log.Error("update query error | Query: ")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: update query error | Query: " + query))
+		w.Write([]byte("BAD REQUEST: update query error"))
 	}
 }
 
 func (a *API) InsertUsers(w http.ResponseWriter, r *http.Request) {
 	var err error
-
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
 
 	var tmpUsers User
 
@@ -131,7 +111,6 @@ func (a *API) InsertUsers(w http.ResponseWriter, r *http.Request) {
 
 	tmpUsers.DateOfBirth, err = time.Parse("2006-01-02", r.FormValue("date_of_birth"))
 	if err != nil {
-		fmt.Println("1")
 		return
 	}
 	tmpUsers.RoleId, err = strconv.Atoi(r.FormValue("role_id"))
@@ -158,12 +137,6 @@ func (a *API) InsertUsers(w http.ResponseWriter, r *http.Request) {
 func (a *API) DeleteUsers(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
-
 	id := r.FormValue("id")
 
 	if id == "" {
@@ -172,7 +145,7 @@ func (a *API) DeleteUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = a.Db.Exec("UPDATE users SET deleted = '" + time.Now().Format("2006-01-02") + "' WHERE id in (" + id + ") AND deleted is NULL").Error
+	err = a.Db.Exec("UPDATE users SET deleted = ? WHERE id = ? AND deleted IS NULL", time.Now().Format("2006-01-02"), id).Error
 	if err != nil {
 		a.Log.Error("Delete query error! Query: ")
 		w.WriteHeader(http.StatusBadRequest)

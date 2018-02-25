@@ -1,15 +1,18 @@
 package wrappers
 
 import (
-	"../api"
+	//"../api"
+	"api"
 	"github.com/justinas/alice"
 	"net/http"
 )
 
 func HandleAll(api *api.API) {
-	http.HandleFunc("/logon", api.LogOn)
 
-	wrapper := alice.New(api.LogonHandler)
+	wrapperLogOn := alice.New(api.ParseHandler)
+	http.Handle("/logon", wrapperLogOn.ThenFunc(api.LogOn))
+
+	wrapper := alice.New(api.ParseHandler, api.LogonHandler)
 
 	http.Handle("/getBooks", wrapper.ThenFunc(api.GetBooks))
 	http.Handle("/getRoles", wrapper.ThenFunc(api.GetRoles))
@@ -26,5 +29,4 @@ func HandleAll(api *api.API) {
 	http.Handle("/deleteRoles", wrapper.ThenFunc(api.DeleteRoles))
 	http.Handle("/deleteBooks", wrapper.ThenFunc(api.DeleteBooks))
 	http.Handle("/deleteUsers", wrapper.ThenFunc(api.DeleteUsers))
-
 }

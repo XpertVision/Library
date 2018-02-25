@@ -20,36 +20,34 @@ type Book struct {
 func (a *API) GetBooks(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
-
 	var books []Book
-	var whereString string
+	var bookTmp Book
 
 	id := r.FormValue("id")
-	WhereBlock("id", id, &whereString)
+	if id != "" {
+		bookTmp.Id, err = strconv.Atoi(id)
+		if err != nil {
+			a.Log.Error("problem with convert string to int (id)")
+		}
+	}
 
-	name := r.FormValue("name")
-	WhereBlock("name", name, &whereString)
+	bookTmp.Name = r.FormValue("name")
 
-	author := r.FormValue("author")
-	WhereBlock("author", author, &whereString)
+	bookTmp.Author = r.FormValue("author")
 
-	userId := r.FormValue("user_id")
-	WhereBlock("user_id", userId, &whereString)
+	uId := r.FormValue("user_id")
+	if uId != "" {
+		bookTmp.UserId, err = strconv.Atoi(uId)
+		if err != nil {
+			a.Log.Error("problem with convert string to int (user_id)")
+		}
+	}
 
-	WhereBlock("deleted", "NULL", &whereString)
-
-	query := "SELECT * FROM books WHERE " + whereString
-
-	err = a.Db.Raw(query).Scan(&books).Error
+	err = a.Db.Where(&bookTmp).Find(&books).Error
 	if err != nil {
-		a.Log.Error("Get query error | Query: " + query)
+		a.Log.Error("Get query error | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: Get query error | Query: " + query))
+		w.Write([]byte("BAD REQUEST: Get query error"))
 		return
 	}
 
@@ -59,53 +57,36 @@ func (a *API) GetBooks(w http.ResponseWriter, r *http.Request) {
 func (a *API) UpdateBooks(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
+	var bookTmp Book
 
 	id := r.FormValue("id")
-	if id == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("BAD REQUEST: empty id"))
-		return
+	bookTmp.Id, err = strconv.Atoi(id)
+	if err != nil {
+		a.Log.Error("problem with convert string to int")
 	}
 
-	var whereString string
-	var setString string
+	bookTmp.Name = r.FormValue("name")
 
-	WhereBlock("id", id, &whereString)
-	WhereBlock("deleted", "NULL", &whereString)
+	bookTmp.Author = r.FormValue("author")
 
-	val := r.FormValue("name")
-	SetBlock("name", val, &setString, true)
-
-	val = r.FormValue("author")
-	SetBlock("author", val, &setString, true)
-
-	val = r.FormValue("user_id")
-	SetBlock("user_id", val, &setString, false)
-
-	SetBlock("updated", time.Now().Format("2006-01-02"), &setString, true)
-
-	query := "UPDATE books SET " + setString + " WHERE " + whereString
-	err = a.Db.Exec(query).Error
+	uId := r.FormValue("user_id")
+	bookTmp.UserId, err = strconv.Atoi(uId)
 	if err != nil {
-		a.Log.Error("update query error | Query: " + query)
+		a.Log.Error("problem with convert string to int")
+	}
+
+	bookTmp.Updated = time.Now()
+
+	err = a.Db.Model(&bookTmp).Updates(bookTmp).Error
+	if err != nil {
+		a.Log.Error("update query error | Query: ")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: update query error | Query: " + query))
+		w.Write([]byte("BAD REQUEST: update query error | Query: "))
 	}
 }
 
 func (a *API) InsertBooks(w http.ResponseWriter, r *http.Request) {
 	var err error
-
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
 
 	var tmpBooks Book
 
@@ -130,12 +111,6 @@ func (a *API) InsertBooks(w http.ResponseWriter, r *http.Request) {
 func (a *API) DeleteBooks(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
-
 	id := r.FormValue("id")
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -143,7 +118,7 @@ func (a *API) DeleteBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = a.Db.Exec("UPDATE books SET deleted = '" + time.Now().Format("2006-01-02") + "' WHERE id in (" + id + ") AND deleted is NULL").Error
+	err = a.Db.Exec("UPDATE books SET deleted = ? WHERE id = ?", time.Now().Format("2006-01-02"), id).Error
 	if err != nil {
 		a.Log.Error("Delete query error! Query: ")
 		w.WriteHeader(http.StatusBadRequest)

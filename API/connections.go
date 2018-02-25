@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"strconv"
 	"time"
 )
 
@@ -18,11 +17,9 @@ func (a *API) GetConnectionFromToken(token string) (Connection, error) {
 	var err error
 	var conn Connection
 
-	query := "SELECT * FROM connections WHERE token = '" + token + "'"
-
-	err = a.Db.Raw(query).Scan(&conn).Error
+	err = a.Db.Find(&conn).Where("token = ?", token).Error
 	if err != nil {
-		a.Log.Error("Get query error | Query: " + query)
+		a.Log.Error("Get query error | Query: " /* + query*/)
 		return conn, errors.New("Get connection from db error")
 	}
 
@@ -33,11 +30,9 @@ func (a *API) GetConnectionFromId(userId int) (Connection, error) {
 	var err error
 	var conn Connection
 
-	query := "SELECT * FROM connections WHERE user_id = " + strconv.Itoa(userId) + ""
-
-	err = a.Db.Raw(query).Scan(&conn).Error
+	err = a.Db.Find(&conn).Where("user_id = ?", userId).Error
 	if err != nil {
-		a.Log.Error("Get query error | Query: " + query)
+		a.Log.Error("Get query error | Query: " /* + query*/)
 		return conn, errors.New("Get connection from db error")
 	}
 
@@ -59,20 +54,9 @@ func (a *API) InsertConnection(conn Connection) error {
 func (a *API) UpdateConnection(conn Connection) error {
 	var err error
 
-	var whereString string
-	var setString string
-
-	SetBlock("token", conn.Token, &setString, true)
-	SetBlock("role_id", strconv.Itoa(conn.RoleId), &setString, false)
-	SetBlock("user_id", strconv.Itoa(conn.UserId), &setString, false)
-	SetBlock("generate_date", conn.GenerateDate.Format("2006-01-02 15:04:05"), &setString, true)
-	WhereBlock("id", strconv.Itoa(conn.Id), &whereString)
-
-	query := "UPDATE connections SET " + setString + " WHERE " + whereString
-
-	err = a.Db.Exec(query).Error
+	err = a.Db.Model(&conn).Where("id = ?", conn.Id).Update(&conn).Error
 	if err != nil {
-		a.Log.Error("update query error | Query: " + query)
+		a.Log.Error("update query error | Query: " /* + query*/)
 		return errors.New("Update connection in db error")
 	}
 
@@ -82,7 +66,7 @@ func (a *API) UpdateConnection(conn Connection) error {
 func (a *API) DeleteConnection(token string) error {
 	var err error
 
-	err = a.Db.Exec("DELETE FROM connections WHERE token = '" + token + "'").Error
+	err = a.Db.Exec("DELETE FROM connections WHERE token = ?", token).Error
 	if err != nil {
 		a.Log.Error("Delete query error! Query: ")
 		return errors.New("Delete connection from db error")

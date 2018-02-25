@@ -23,33 +23,28 @@ type Role struct {
 func (a *API) GetRoles(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
-
 	var roles []Role
-	var whereString string
+	var roleTmp Role
 
 	id := r.FormValue("id")
-	WhereBlock("id", id, &whereString)
+	roleTmp.Id, err = strconv.Atoi(id)
+	if err != nil {
+		a.Log.Error("problem with convert string to int")
+	}
 
-	name := r.FormValue("name")
-	WhereBlock("name", name, &whereString)
+	roleTmp.Name = r.FormValue("name")
 
 	roleId := r.FormValue("role_id")
-	WhereBlock("role_id", roleId, &whereString)
-
-	WhereBlock("deleted", "NULL", &whereString)
-
-	query := "SELECT * FROM roles WHERE " + whereString
-
-	err = a.Db.Raw(query).Scan(&roles).Error
+	roleTmp.Id, err = strconv.Atoi(roleId)
 	if err != nil {
-		a.Log.Error("Get query error | Query: " + query)
+		a.Log.Error("problem with convert string to int")
+	}
+
+	err = a.Db.Where(&roleTmp).Find(&roles).Error
+	if err != nil {
+		a.Log.Error("Get query error | Query: ")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: Get query error | Query: " + query))
+		w.Write([]byte("BAD REQUEST: Get query error"))
 		return
 	}
 
@@ -59,54 +54,37 @@ func (a *API) GetRoles(w http.ResponseWriter, r *http.Request) {
 func (a *API) UpdateRoles(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
+	var roleTmp Role
 
 	id := r.FormValue("id")
-	if id == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("BAD REQUEST: empty id"))
-		return
+	roleTmp.Id, err = strconv.Atoi(id)
+	if err != nil {
+		a.Log.Error("problem with convert string to int")
 	}
 
-	var whereString string
-	var setString string
+	roleTmp.Name = r.FormValue("name")
 
-	WhereBlock("id", id, &whereString)
-	WhereBlock("deleted", "NULL", &whereString)
-
-	val := r.FormValue("name")
-	SetBlock("name", val, &setString, true)
-
-	val = r.FormValue("role_id")
-	SetBlock("role_id", val, &setString, false)
-
-	val = r.FormValue("allowe_paths")
-	SetBlock("allowe_paths", val, &setString, true)
-
-	SetBlock("updated", time.Now().Format("2006-01-02"), &setString, true)
-
-	query := "UPDATE roles SET " + setString + " WHERE " + whereString
-
-	err = a.Db.Exec(query).Error
+	roleId := r.FormValue("role_id")
+	roleTmp.RoleId, err = strconv.Atoi(roleId)
 	if err != nil {
-		a.Log.Error("update query error | Query: " + query)
+		a.Log.Error("problem with convert string to int")
+	}
+
+	allowePathTmp := r.FormValue("allowe_paths")
+	roleTmp.AllowePaths.Scan(allowePathTmp)
+
+	roleTmp.Updated = time.Now()
+
+	err = a.Db.Model(&roleTmp).Updates(roleTmp).Error
+	if err != nil {
+		a.Log.Error("update query error | Query: ")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: update query error | Query: " + query))
+		w.Write([]byte("BAD REQUEST: update query error"))
 	}
 }
 
 func (a *API) InsertRoles(w http.ResponseWriter, r *http.Request) {
 	var err error
-
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
 
 	var tmpRoles Role
 
@@ -137,12 +115,6 @@ func (a *API) InsertRoles(w http.ResponseWriter, r *http.Request) {
 func (a *API) DeleteRoles(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		a.Log.Error("Parse form error")
-		return
-	}
-
 	id := r.FormValue("id")
 
 	if id == "" {
@@ -151,7 +123,7 @@ func (a *API) DeleteRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = a.Db.Exec("UPDATE roles SET deleted = '" + time.Now().Format("2006-01-02") + "' WHERE id in (" + id + ") AND deleted is NULL").Error
+	err = a.Db.Exec("UPDATE roles SET deleted = ? WHERE id = ? AND deleted IS NULL", time.Now().Format("2006-01-02"), id).Error
 	if err != nil {
 		a.Log.Error("Delete query error! Query: ")
 		w.WriteHeader(http.StatusBadRequest)
@@ -163,7 +135,7 @@ func (a *API) GetRoleFromRoleId(roleId int) (Role, error) {
 	var err error
 	var roleTmp Role
 
-	err = a.Db.Raw("SELECT * FROM roles WHERE role_id = " + strconv.Itoa(roleId)).Scan(&roleTmp).Error
+	err = a.Db.Find(&roleTmp).Where("role_id = ?", roleId).Error
 	if err != nil {
 		fmt.Println("24")
 		a.Log.Error("Delete query error! Query: ")

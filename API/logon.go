@@ -10,28 +10,16 @@ import (
 func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	err = UniversalParseForm(&w, r)
-	if err != nil {
-		return
-	}
+	var user, userTmp User
 
-	var user User
-	var whereString string
-
-	login := r.FormValue("login")
-	WhereBlock("login", login, &whereString)
+	userTmp.Login = r.FormValue("login")
 
 	pass := r.FormValue("password")
 	hashPass := sha256.Sum256([]byte(pass))
-	passStr := fmt.Sprintf("%x", string(hashPass[:]))
-
-	WhereBlock("password", "'"+passStr+"'", &whereString)
-	WhereBlock("deleted", "NULL", &whereString)
-
-	query := "SELECT * FROM users WHERE " + whereString
+	userTmp.Password = fmt.Sprintf("%x", string(hashPass[:]))
 
 	//Search user in db
-	err = a.Db.Raw(query).Scan(&user).Error
+	err = a.Db.Where(&userTmp).Find(&user).Error
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Authorization error"))
@@ -59,7 +47,7 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 	conn.UserId = user.Id
 	conn.RoleId = user.RoleId
 	conn.GenerateDate = genTime
-	conn.Token = GetToken(user.Login, genTime)
+	conn.Token = getToken(user.Login, genTime)
 
 	//Loginig user
 	err = a.InsertConnection(conn)
@@ -74,21 +62,31 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(conn.Token))
 }
 
+func (a *API) ParseHandler(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("BAD REQUEST: Parse form error"))
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
+
+	return http.HandlerFunc(fn)
+}
+
 func (a *API) LogonHandler(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		var err error
-
-		err = UniversalParseForm(&w, r)
-		if err != nil {
-			a.Log.Error("Parse form error")
-			return
-		}
 
 		var conn Connection
 		token := r.FormValue("token")
 
 		//If invalid token
-		err = a.Db.Raw("SELECT * FROM connections WHERE token = '" + token + "'").Scan(&conn).Error
+		err = a.Db.Find(&conn).Where("token = ?", token).Error
 		if err != nil {
 			a.Log.Error("Inernal problems: func LogonHandler")
 			w.WriteHeader(http.StatusInternalServerError)

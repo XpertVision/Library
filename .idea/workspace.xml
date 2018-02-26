@@ -2,12 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="cdfad166-5dcb-4640-b5b3-3d9c8607de9f" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/API/books.go" afterPath="$PROJECT_DIR$/API/books.go" />
-      <change beforePath="$PROJECT_DIR$/API/connections.go" afterPath="$PROJECT_DIR$/API/connections.go" />
-      <change beforePath="$PROJECT_DIR$/API/funcs.go" afterPath="$PROJECT_DIR$/API/funcs.go" />
-      <change beforePath="$PROJECT_DIR$/API/logon.go" afterPath="$PROJECT_DIR$/API/logon.go" />
-      <change beforePath="$PROJECT_DIR$/API/roles.go" afterPath="$PROJECT_DIR$/API/roles.go" />
-      <change beforePath="$PROJECT_DIR$/API/users.go" afterPath="$PROJECT_DIR$/API/users.go" />
+      <change beforePath="$PROJECT_DIR$/API/books.go" afterPath="$PROJECT_DIR$/api/books.go" />
+      <change beforePath="$PROJECT_DIR$/API/connections.go" afterPath="$PROJECT_DIR$/api/connections.go" />
+      <change beforePath="$PROJECT_DIR$/API/funcs.go" afterPath="$PROJECT_DIR$/api/funcs.go" />
+      <change beforePath="$PROJECT_DIR$/API/logon.go" afterPath="$PROJECT_DIR$/api/logon.go" />
+      <change beforePath="$PROJECT_DIR$/API/roles.go" afterPath="$PROJECT_DIR$/api/roles.go" />
+      <change beforePath="$PROJECT_DIR$/API/users.go" afterPath="$PROJECT_DIR$/api/users.go" />
       <change beforePath="$PROJECT_DIR$/main.go" afterPath="$PROJECT_DIR$/main.go" />
       <change beforePath="$PROJECT_DIR$/wrappers/handles.go" afterPath="$PROJECT_DIR$/wrappers/handles.go" />
     </list>

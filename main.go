@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/XpertVision/Library/api"
-	"github.com/XpertVision/Library/wrappers"
 	"github.com/jcelliott/lumber"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+
+	"github.com/XpertVision/Library/api"
+	"github.com/XpertVision/Library/wrappers"
 )
 
 func main() {

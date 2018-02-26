@@ -2,8 +2,7 @@ package main
 
 import (
 	"github.com/XpertVision/Library/wrappers"
-	"github.com/XpertVision/Library/api"
-	"api"
+	"git"
 	"fmt"
 	"github.com/jcelliott/lumber"
 	"github.com/jinzhu/gorm"

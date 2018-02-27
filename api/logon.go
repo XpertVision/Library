@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+//LogOn func checks exist user/pass pare or not, if exist - generates and return token, if logined yet - return current token
 func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -19,39 +20,42 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 	userTmp.Password = fmt.Sprintf("%x", string(hashPass[:]))
 
 	//Search user in db
-	err = a.Db.Where(&userTmp).Find(&user).Error
+	err = a.DB.Where(&userTmp).Find(&user).Error
 	if err != nil {
+		a.Log.Error("problem with select query | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Authorization error"))
+		w.Write([]byte("ERROR"))
 		return
 	}
 
 	//If wrong user
-	if user.Id == 0 {
+	if user.ID == 0 {
+		a.Log.Info("Incorrect user")
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("Wrong Login or Password"))
 		return
 	}
 
 	//Return token if exist for this user
-	existConn, err := a.GetConnectionFromId(user.Id)
-	if err == nil && existConn.Id != 0 {
+	conn, err := a.GetConnectionFromID(user.ID)
+	if err == nil && conn.ID != 0 {
+		a.Log.Info("authorizated yet")
 		w.WriteHeader(http.StatusAccepted)
-		w.Write([]byte(existConn.Token))
+		w.Write([]byte(conn.Token))
 		return
 	}
 
-	var conn Connection
 	genTime := time.Now()
 
-	conn.UserId = user.Id
-	conn.RoleId = user.RoleId
+	conn.UserID = user.ID
+	conn.RoleID = user.RoleID
 	conn.GenerateDate = genTime
 	conn.Token = getToken(user.Login, genTime)
 
 	//Loginig user
 	err = a.InsertConnection(conn)
 	if err != nil {
+		a.Log.Error("problem with insert new connection to db | Error: ", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("Authirization error"))
 		return
@@ -62,13 +66,14 @@ func (a *API) LogOn(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(conn.Token))
 }
 
+//ParseHandler func is middleware for checking form valids
 func (a *API) ParseHandler(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
-
 		if err != nil {
+			a.Log.Error("Invalid form | Error: ", err)
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("BAD REQUEST: Parse form error"))
+			w.Write([]byte("ERROR"))
 			return
 		}
 
@@ -78,6 +83,7 @@ func (a *API) ParseHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(fn)
 }
 
+//LogonHandler func is middleware for cheching valids of token and access role for users
 func (a *API) LogonHandler(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		var err error
@@ -86,11 +92,11 @@ func (a *API) LogonHandler(next http.Handler) http.Handler {
 		token := r.FormValue("token")
 
 		//If invalid token
-		err = a.Db.Find(&conn).Where("token = ?", token).Error
+		err = a.DB.Find(&conn).Where("token = ?", token).Error
 		if err != nil {
-			a.Log.Error("Inernal problems: func LogonHandler")
+			a.Log.Error("problem with select query | Error: ", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Incorrect user"))
+			w.Write([]byte("ERROR"))
 			return
 		}
 
@@ -110,13 +116,13 @@ func (a *API) LogonHandler(next http.Handler) http.Handler {
 		conn.GenerateDate = time.Now()
 		err = a.UpdateConnection(conn)
 		if err != nil {
-			a.Log.Error("update token time error")
+			a.Log.Error("update token time error | Error: ", err)
 		}
 
 		//Finding role_id
-		role, err := a.GetRoleFromRoleId(conn.RoleId)
+		role, err := a.GetRoleFromRoleID(conn.RoleID)
 		if err != nil {
-			a.Log.Error(err.Error())
+			a.Log.Error("get role from role id error | Errore: ", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Access Denied"))
 			return
@@ -133,6 +139,7 @@ func (a *API) LogonHandler(next http.Handler) http.Handler {
 
 		//If access role incorrect for this target-func
 		if !accessOk {
+			a.Log.Info("Inccorect role for func")
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Access Denied"))
 			return

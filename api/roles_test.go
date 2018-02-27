@@ -3,22 +3,23 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/lib/pq"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strconv"
 	"testing"
+
+	"github.com/lib/pq"
 )
 
 func TestGetRoles(t *testing.T) {
 	var err error
 	var roleArrayFirst, roleArrayLast []Role
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
-	testApi.Db.Raw("SELECT * FROM roles WHERE deleted IS NULL").Scan(&roleArrayFirst)
+	testAPI.DB.Raw("SELECT * FROM roles WHERE deleted IS NULL").Scan(&roleArrayFirst)
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/getRoles", nil)
@@ -26,7 +27,7 @@ func TestGetRoles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testApi.GetRoles(w, r)
+	testAPI.GetRoles(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
@@ -38,6 +39,9 @@ func TestGetRoles(t *testing.T) {
 
 	json.NewDecoder(w.Body).Decode(&roleArrayLast)
 	lastBytes, err := json.Marshal(roleArrayLast)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if !bytes.Equal(firstBytes, lastBytes) {
 		t.Error("error, not equal")
@@ -49,8 +53,8 @@ func TestInsertRoles(t *testing.T) {
 	var roleFromDb []Role
 	var tmpAllowePaths pq.StringArray
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertRoles?name=TEST&role_id=777&allowe_paths={/TEST1,/TEST2,/TEST3}", nil)
@@ -58,18 +62,18 @@ func TestInsertRoles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testApi.InsertRoles(w, r)
+	testAPI.InsertRoles(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	testApi.Db.Raw("SELECT * FROM roles WHERE name = 'TEST' AND role_id = 777 AND deleted IS NULL").Scan(&roleFromDb)
+	testAPI.DB.Raw("SELECT * FROM roles WHERE name = 'TEST' AND role_id = 777 AND deleted IS NULL").Scan(&roleFromDb)
 
 	if cap(roleFromDb) != 1 {
 		t.Error("too much rows found")
 	}
 
-	if roleFromDb[0].RoleId != 777 {
+	if roleFromDb[0].RoleID != 777 {
 		t.Error("Wrong role_id")
 	}
 
@@ -88,15 +92,15 @@ func TestInsertRoles(t *testing.T) {
 		t.Error("Wrong allowe_paths")
 	}
 
-	testApi.Db.Exec("DELETE FROM roles WHERE name = 'TEST' AND role_id = 777")
+	testAPI.DB.Exec("DELETE FROM roles WHERE name = 'TEST' AND role_id = 777")
 }
 
 func TestDeleteRoles(t *testing.T) {
 	var err error
 	var rolesFromDb []Role
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertRoles?name=TEST&role_id=777&allowe_paths={/TEST1,/TEST2,/TEST3}", nil)
@@ -104,41 +108,41 @@ func TestDeleteRoles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testApi.InsertRoles(w, r)
+	testAPI.InsertRoles(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	testApi.Db.Raw("SELECT * FROM roles WHERE role_id=777 AND deleted IS NULL").Scan(&rolesFromDb)
+	testAPI.DB.Raw("SELECT * FROM roles WHERE role_id=777 AND deleted IS NULL").Scan(&rolesFromDb)
 	if cap(rolesFromDb) != 1 {
 		t.Error("row didn't insert")
 	}
 
 	w = httptest.NewRecorder()
-	r, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/deleteRoles?id="+strconv.Itoa(rolesFromDb[0].Id)+"", nil)
+	r, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/deleteRoles?id="+strconv.Itoa(rolesFromDb[0].ID)+"", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testApi.DeleteRoles(w, r)
+	testAPI.DeleteRoles(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	testApi.Db.Raw("SELECT * FROM roles WHERE role_id=777 AND deleted NOTNULL").Scan(&rolesFromDb)
+	testAPI.DB.Raw("SELECT * FROM roles WHERE role_id=777 AND deleted NOTNULL").Scan(&rolesFromDb)
 	if cap(rolesFromDb) != 1 {
 		t.Error("row didn't delete")
 	}
 
-	testApi.Db.Exec("DELETE FROM roles WHERE role_id=777 AND deleted NOTNULL")
+	testAPI.DB.Exec("DELETE FROM roles WHERE role_id=777 AND deleted NOTNULL")
 }
 
 func TestUpdateRoles(t *testing.T) {
 	var err error
 	var rolesFromDb []Role
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertRoles?name=TEST&role_id=777&allow_paths={/TEST1,/TEST2,/TEST3}", nil)
@@ -146,28 +150,28 @@ func TestUpdateRoles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testApi.InsertRoles(w, r)
+	testAPI.InsertRoles(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	testApi.Db.Raw("SELECT * FROM roles WHERE role_id=777 AND deleted IS NULL").Scan(&rolesFromDb)
+	testAPI.DB.Raw("SELECT * FROM roles WHERE role_id=777 AND deleted IS NULL").Scan(&rolesFromDb)
 	if cap(rolesFromDb) != 1 {
 		t.Error("row didn't insert")
 	}
 
 	w = httptest.NewRecorder()
-	r, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/updateRoles?id="+strconv.Itoa(rolesFromDb[0].Id)+"&name=ROLEN&allowe_paths={/p1,/p2,/p3,/p4}&role_id=888", nil)
+	r, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/updateRoles?id="+strconv.Itoa(rolesFromDb[0].ID)+"&name=ROLEN&allowe_paths={/p1,/p2,/p3,/p4}&role_id=888", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testApi.UpdateRoles(w, r)
+	testAPI.UpdateRoles(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	testApi.Db.Raw("SELECT * FROM roles WHERE id=" + strconv.Itoa(rolesFromDb[0].Id) + " AND updated NOTNULL").Scan(&rolesFromDb)
+	testAPI.DB.Raw("SELECT * FROM roles WHERE id=" + strconv.Itoa(rolesFromDb[0].ID) + " AND updated NOTNULL").Scan(&rolesFromDb)
 	if cap(rolesFromDb) != 1 {
 		t.Error("row didn't update")
 	}
@@ -184,7 +188,7 @@ func TestUpdateRoles(t *testing.T) {
 		t.Error("Wrong allowe_paths")
 	}
 
-	if rolesFromDb[0].RoleId != 888 {
+	if rolesFromDb[0].RoleID != 888 {
 		t.Error("Wrong updated role_id")
 	}
 
@@ -192,15 +196,15 @@ func TestUpdateRoles(t *testing.T) {
 		t.Error("wrong updated updated")
 	}
 
-	testApi.Db.Exec("DELETE FROM roles WHERE id = " + strconv.Itoa(rolesFromDb[0].Id) + " AND updated NOTNULL")
+	testAPI.DB.Exec("DELETE FROM roles WHERE id = " + strconv.Itoa(rolesFromDb[0].ID) + " AND updated NOTNULL")
 }
 
-func TestGetRoleFromId(t *testing.T) {
+func TestGetRoleFromID(t *testing.T) {
 	var err error
 	var rolesFromDb Role
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertRoles?name=TEST&role_id=777&allow_paths={/TEST1,/TEST2,/TEST3}", nil)
@@ -208,15 +212,19 @@ func TestGetRoleFromId(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testApi.InsertRoles(w, r)
+	testAPI.InsertRoles(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	rolesFromDb, err = testApi.GetRoleFromRoleId(777)
+	rolesFromDb, err = testAPI.GetRoleFromRoleID(777)
+	if err != nil {
+		t.Error(err)
+	}
+
 	if rolesFromDb.Name != "TEST" {
 		t.Error("Wrong Name, bad result")
 	}
 
-	testApi.Db.Exec("DELETE FROM roles WHERE role_id = 777")
+	testAPI.DB.Exec("DELETE FROM roles WHERE role_id = 777")
 }

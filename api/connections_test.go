@@ -7,45 +7,45 @@ import (
 	"time"
 )
 
-func TestGetConnectionFromId(t *testing.T) {
+func TestGetConnectionFromID(t *testing.T) {
 	var err error
 	var connectionToDb, connectionFromFunc Connection
 	var connectionFromDb []Connection
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
-	connectionToDb.UserId = 777
-	connectionToDb.RoleId = 777
+	connectionToDb.UserID = 777
+	connectionToDb.RoleID = 777
 	connectionToDb.GenerateDate, err = time.Parse("2006-01-02 15:04:05", "1900-01-02 15:15:15")
 	if err != nil {
 		t.Fatal("parse date error: ", err)
 	}
 	connectionToDb.Token = "test_token"
 
-	testApi.InsertConnection(connectionToDb)
+	testAPI.InsertConnection(connectionToDb)
 
-	testApi.Db.Raw("SELECT * FROM connections WHERE user_id = 777").Scan(&connectionFromDb)
+	testAPI.DB.Raw("SELECT * FROM connections WHERE user_id = 777").Scan(&connectionFromDb)
 
 	if cap(connectionFromDb) != 1 {
 		t.Error("too much rows found, capacity: ", cap(connectionFromDb))
 	}
 
-	connectionFromFunc, err = testApi.GetConnectionFromId(connectionFromDb[0].UserId)
+	connectionFromFunc, err = testAPI.GetConnectionFromID(connectionFromDb[0].UserID)
 	if err != nil {
 		t.Error("Error: ", err)
 	}
 
-	if connectionFromFunc.Id != connectionFromDb[0].Id {
-		t.Error("problem with id: ", connectionFromFunc.Id)
+	if connectionFromFunc.ID != connectionFromDb[0].ID {
+		t.Error("problem with id: ", connectionFromFunc.ID)
 	}
 
-	if connectionFromFunc.UserId != connectionFromDb[0].UserId {
-		t.Error("problem with user_id: ", connectionFromFunc.UserId)
+	if connectionFromFunc.UserID != connectionFromDb[0].UserID {
+		t.Error("problem with user_id: ", connectionFromFunc.UserID)
 	}
 
-	if connectionFromFunc.RoleId != connectionFromDb[0].RoleId {
-		t.Error("problem with role_id: ", connectionFromFunc.RoleId)
+	if connectionFromFunc.RoleID != connectionFromDb[0].RoleID {
+		t.Error("problem with role_id: ", connectionFromFunc.RoleID)
 	}
 
 	if connectionFromFunc.Token != connectionFromDb[0].Token {
@@ -56,7 +56,7 @@ func TestGetConnectionFromId(t *testing.T) {
 		t.Error("problem wuth generate_date: ", connectionFromFunc.GenerateDate.Format("2006-01-02 15:04:05"))
 	}
 
-	testApi.Db.Exec("DELETE FROM connections WHERE id = " + strconv.Itoa(connectionFromFunc.Id))
+	testAPI.DB.Exec("DELETE FROM connections WHERE id = " + strconv.Itoa(connectionFromFunc.ID))
 }
 
 func TestGetConnectionFromToken(t *testing.T) {
@@ -64,39 +64,39 @@ func TestGetConnectionFromToken(t *testing.T) {
 	var connectionToDb, connectionFromFunc Connection
 	var connectionFromDb []Connection
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
-	connectionToDb.UserId = 777
-	connectionToDb.RoleId = 777
+	connectionToDb.UserID = 777
+	connectionToDb.RoleID = 777
 	connectionToDb.GenerateDate, err = time.Parse("2006-01-02 15:04:05", "1900-01-02 15:15:15")
 	if err != nil {
 		t.Fatal("parse date error: ", err)
 	}
 	connectionToDb.Token = "test_token"
 
-	testApi.InsertConnection(connectionToDb)
+	testAPI.InsertConnection(connectionToDb)
 
-	testApi.Db.Raw("SELECT * FROM connections WHERE user_id = 777").Scan(&connectionFromDb)
+	testAPI.DB.Raw("SELECT * FROM connections WHERE user_id = 777").Scan(&connectionFromDb)
 
 	if cap(connectionFromDb) != 1 {
 		t.Error("too much rows found, capacity: ", cap(connectionFromDb))
 	}
 
-	connectionFromFunc, err = testApi.GetConnectionFromToken(connectionFromDb[0].Token)
+	connectionFromFunc, err = testAPI.GetConnectionFromToken(connectionFromDb[0].Token)
 	if err != nil {
 		t.Error("Error: ", err)
 	}
 
-	if connectionFromFunc.Id != connectionFromDb[0].Id {
+	if connectionFromFunc.ID != connectionFromDb[0].ID {
 		t.Error("problem with id")
 	}
 
-	if connectionFromFunc.UserId != connectionFromDb[0].UserId {
+	if connectionFromFunc.UserID != connectionFromDb[0].UserID {
 		t.Error("problem with user_id")
 	}
 
-	if connectionFromFunc.RoleId != connectionFromDb[0].RoleId {
+	if connectionFromFunc.RoleID != connectionFromDb[0].RoleID {
 		t.Error("problem with role_id")
 	}
 
@@ -108,7 +108,7 @@ func TestGetConnectionFromToken(t *testing.T) {
 		t.Error("problem wuth generate_date")
 	}
 
-	testApi.Db.Exec("DELETE FROM connections WHERE id = " + strconv.Itoa(connectionFromFunc.Id))
+	testAPI.DB.Exec("DELETE FROM connections WHERE id = " + strconv.Itoa(connectionFromFunc.ID))
 }
 
 func TestInsertConnection(t *testing.T) {
@@ -116,30 +116,30 @@ func TestInsertConnection(t *testing.T) {
 	var connectionToDb Connection
 	var connectionFromDb []Connection
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
-	connectionToDb.UserId = 777
-	connectionToDb.RoleId = 777
+	connectionToDb.UserID = 777
+	connectionToDb.RoleID = 777
 	connectionToDb.GenerateDate, err = time.Parse("2006-01-02 15:04:05", "1900-01-02 15:15:15")
 	if err != nil {
 		t.Fatal("parse date error: ", err)
 	}
 	connectionToDb.Token = "test_token"
 
-	testApi.InsertConnection(connectionToDb)
+	testAPI.InsertConnection(connectionToDb)
 
-	testApi.Db.Raw("SELECT * FROM connections WHERE user_id = 777").Scan(&connectionFromDb)
+	testAPI.DB.Raw("SELECT * FROM connections WHERE user_id = 777").Scan(&connectionFromDb)
 
 	if cap(connectionFromDb) != 1 {
 		t.Error("too much rows found, capacity: ", cap(connectionFromDb))
 	}
 
-	if connectionFromDb[0].UserId != connectionToDb.UserId {
+	if connectionFromDb[0].UserID != connectionToDb.UserID {
 		t.Error("Wrong user_id")
 	}
 
-	if connectionFromDb[0].RoleId != connectionToDb.RoleId {
+	if connectionFromDb[0].RoleID != connectionToDb.RoleID {
 		t.Error("Wrong role_id")
 	}
 
@@ -151,47 +151,47 @@ func TestInsertConnection(t *testing.T) {
 		t.Error("Wrong token")
 	}
 
-	testApi.Db.Exec("DELETE FROM connections WHERE role_id = 777 AND token = 'test_token'")
+	testAPI.DB.Exec("DELETE FROM connections WHERE role_id = 777 AND token = 'test_token'")
 }
 
 func TestUpdateConnection(t *testing.T) {
 	var err error
 	var connectionInDb, connectingForUp Connection
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
-	connectionInDb.UserId = 777
-	connectionInDb.RoleId = 777
+	connectionInDb.UserID = 777
+	connectionInDb.RoleID = 777
 	connectionInDb.GenerateDate, err = time.Parse("2006-01-02 15:04:05", "1900-01-02 15:15:15")
 	if err != nil {
 		t.Fatal("parse date error: ", err)
 	}
 	connectionInDb.Token = "test_token"
 
-	testApi.InsertConnection(connectionInDb)
+	testAPI.InsertConnection(connectionInDb)
 
-	testApi.Db.Raw("SELECT * FROM connections WHERE user_id = 777").Scan(&connectionInDb)
+	testAPI.DB.Raw("SELECT * FROM connections WHERE user_id = 777").Scan(&connectionInDb)
 
-	connectingForUp.Id = connectionInDb.Id
-	connectingForUp.UserId = 888
-	connectingForUp.RoleId = 888
+	connectingForUp.ID = connectionInDb.ID
+	connectingForUp.UserID = 888
+	connectingForUp.RoleID = 888
 	connectingForUp.Token = "update_token"
 	connectingForUp.GenerateDate = time.Now()
 
-	testApi.UpdateConnection(connectingForUp)
+	testAPI.UpdateConnection(connectingForUp)
 
-	testApi.Db.Raw("SELECT * FROM connections WHERE id = " + strconv.Itoa(connectingForUp.Id)).Scan(&connectionInDb)
+	testAPI.DB.Raw("SELECT * FROM connections WHERE id = " + strconv.Itoa(connectingForUp.ID)).Scan(&connectionInDb)
 
-	if connectingForUp.Id != connectionInDb.Id {
+	if connectingForUp.ID != connectionInDb.ID {
 		t.Error("Wrong id")
 	}
 
-	if connectingForUp.UserId != connectionInDb.UserId {
+	if connectingForUp.UserID != connectionInDb.UserID {
 		t.Error("Wrong user_id")
 	}
 
-	if connectingForUp.RoleId != connectionInDb.RoleId {
+	if connectingForUp.RoleID != connectionInDb.RoleID {
 		t.Error("Wrong role_id")
 	}
 
@@ -203,34 +203,38 @@ func TestUpdateConnection(t *testing.T) {
 		t.Error("Wrong generate_date")
 	}
 
-	testApi.Db.Exec("DELETE FROM connections WHERE id = " + strconv.Itoa(connectionInDb.Id))
+	testAPI.DB.Exec("DELETE FROM connections WHERE id = " + strconv.Itoa(connectionInDb.ID))
 }
 
 func TestDeleteConnection(t *testing.T) {
+	var err error
 	var conn Connection
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
-	conn.UserId = 777
-	conn.RoleId = 777
+	conn.UserID = 777
+	conn.RoleID = 777
 	conn.GenerateDate = time.Now()
 	conn.Token = "test_token"
 
-	testApi.InsertConnection(conn)
+	err = testAPI.InsertConnection(conn)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	testApi.Db.Raw("SELECT * FROM connections WHERE token = '" + conn.Token + "'").Scan(&conn)
+	testAPI.DB.Raw("SELECT * FROM connections WHERE token = '" + conn.Token + "'").Scan(&conn)
 
-	if conn.Id == 0 {
+	if conn.ID == 0 {
 		t.Fatal("Insert was incorrect")
 	}
 
-	testApi.DeleteConnection(conn.Token)
+	testAPI.DeleteConnection(conn.Token)
 
-	conn.Id = 0
-	testApi.Db.Raw("SELECT * FROM connections WHERE token = '" + conn.Token + "'").Scan(&conn)
+	conn.ID = 0
+	testAPI.DB.Raw("SELECT * FROM connections WHERE token = '" + conn.Token + "'").Scan(&conn)
 
-	if conn.Id != 0 {
-		t.Fatal("Delete was incorrect", conn.Id)
+	if conn.ID != 0 {
+		t.Fatal("Delete was incorrect", conn.ID)
 	}
 }

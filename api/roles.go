@@ -3,23 +3,25 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/lib/pq"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/lib/pq"
 )
 
+//Role struct is struct for roles table in db
 type Role struct {
-	Id          int            `gorm:"column:id;not null;type:integer"`
+	ID          int            `gorm:"column:id;not null;type:integer"`
 	Name        string         `gorm:"column:name;not null;type:text"`
-	RoleId      int            `gorm:"column:role_id;not null;type:integer"`
+	RoleID      int            `gorm:"column:role_id;not null;type:integer"`
 	AllowePaths pq.StringArray `gorm:"column:allowe_paths;type:text[]"`
 	Deleted     time.Time      `gorm:"column:deleted;type:date;default:''"`
 	Updated     time.Time      `gorm:"column:updated;type:date;default:''"`
 	Created     time.Time      `gorm:"column:created;type:date;default:''"`
 }
 
+//GetRoles func return to web roles table data
 func (a *API) GetRoles(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -27,47 +29,60 @@ func (a *API) GetRoles(w http.ResponseWriter, r *http.Request) {
 	var roleTmp Role
 
 	id := r.FormValue("id")
-	roleTmp.Id, err = strconv.Atoi(id)
+	roleTmp.ID, err = strconv.Atoi(id)
 	if err != nil {
-		a.Log.Error("problem with convert string to int")
+		a.Log.Error("problem with convert string to int (id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
 	roleTmp.Name = r.FormValue("name")
 
-	roleId := r.FormValue("role_id")
-	roleTmp.Id, err = strconv.Atoi(roleId)
+	roleID := r.FormValue("role_id")
+	roleTmp.ID, err = strconv.Atoi(roleID)
 	if err != nil {
-		a.Log.Error("problem with convert string to int")
+		a.Log.Error("problem with convert string to int (role_id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
-	err = a.Db.Where(&roleTmp).Find(&roles).Error
+	err = a.DB.Where(&roleTmp).Find(&roles).Error
 	if err != nil {
-		a.Log.Error("Get query error | Query: ")
+		a.Log.Error("Get query error | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: Get query error"))
+		w.Write([]byte("ERROR"))
 		return
 	}
 
 	json.NewEncoder(w).Encode(roles)
 }
 
+//UpdateRoles func updates data in roles table
 func (a *API) UpdateRoles(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	var roleTmp Role
 
 	id := r.FormValue("id")
-	roleTmp.Id, err = strconv.Atoi(id)
+	roleTmp.ID, err = strconv.Atoi(id)
 	if err != nil {
-		a.Log.Error("problem with convert string to int")
+		a.Log.Error("problem with convert string to int (id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
 	roleTmp.Name = r.FormValue("name")
 
-	roleId := r.FormValue("role_id")
-	roleTmp.RoleId, err = strconv.Atoi(roleId)
+	roleID := r.FormValue("role_id")
+	roleTmp.RoleID, err = strconv.Atoi(roleID)
 	if err != nil {
-		a.Log.Error("problem with convert string to int")
+		a.Log.Error("problem with convert string to int (role_id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
 	allowePathTmp := r.FormValue("allowe_paths")
@@ -75,14 +90,16 @@ func (a *API) UpdateRoles(w http.ResponseWriter, r *http.Request) {
 
 	roleTmp.Updated = time.Now()
 
-	err = a.Db.Model(&roleTmp).Updates(roleTmp).Error
+	err = a.DB.Model(&roleTmp).Updates(roleTmp).Error
 	if err != nil {
-		a.Log.Error("update query error | Query: ")
+		a.Log.Error("update query error | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: update query error"))
+		w.Write([]byte("ERROR"))
+		return
 	}
 }
 
+//InsertRoles func inserts data in roles table
 func (a *API) InsertRoles(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -93,52 +110,55 @@ func (a *API) InsertRoles(w http.ResponseWriter, r *http.Request) {
 	tmpAllowePaths := r.FormValue("allowe_paths")
 	tmpRoles.AllowePaths.Scan(tmpAllowePaths)
 
-	role, err := strconv.Atoi(r.FormValue("role_id"))
+	roleID, err := strconv.Atoi(r.FormValue("role_id"))
 	if err != nil {
-		a.Log.Error("Convert role_id error")
+		a.Log.Error("problem with convert string to int (role_id) | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal problems"))
+		w.Write([]byte("ERROR"))
 		return
 	}
-	tmpRoles.RoleId = role
+	tmpRoles.RoleID = roleID
 
 	tmpRoles.Created = time.Now()
 
-	err = a.Db.Create(&tmpRoles).Error
+	err = a.DB.Create(&tmpRoles).Error
 	if err != nil {
-		a.Log.Error("Insert query error")
+		a.Log.Error("Insert query error | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: Insert query error | Query: "))
+		w.Write([]byte("ERROR"))
+		return
 	}
 }
 
+//DeleteRoles func set delete column in roles table for row
 func (a *API) DeleteRoles(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	id := r.FormValue("id")
-
 	if id == "" {
+		a.Log.Error("empty id")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("BAD REQUEST: empty id"))
+		w.Write([]byte("ERROR"))
 		return
 	}
 
-	err = a.Db.Exec("UPDATE roles SET deleted = ? WHERE id = ? AND deleted IS NULL", time.Now().Format("2006-01-02"), id).Error
+	err = a.DB.Exec("UPDATE roles SET deleted = ? WHERE id = ? AND deleted IS NULL", time.Now().Format("2006-01-02"), id).Error
 	if err != nil {
-		a.Log.Error("Delete query error! Query: ")
+		a.Log.Error("Delete query error! Error: ", err)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("BAD REQUEST: delete query error"))
+		w.Write([]byte("ERROR"))
+		return
 	}
 }
 
-func (a *API) GetRoleFromRoleId(roleId int) (Role, error) {
+//GetRoleFromRoleID func return role struct with full data from roles table with "roleID" filter
+func (a *API) GetRoleFromRoleID(roleID int) (Role, error) {
 	var err error
 	var roleTmp Role
 
-	err = a.Db.Find(&roleTmp).Where("role_id = ?", roleId).Error
+	err = a.DB.Find(&roleTmp).Where("role_id = ?", roleID).Error
 	if err != nil {
-		fmt.Println("24")
-		a.Log.Error("Delete query error! Query: ")
+		a.Log.Error("Delete query error! Error: ", err)
 		return roleTmp, errors.New("Delete connection from db error")
 	}
 

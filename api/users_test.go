@@ -15,10 +15,10 @@ func TestGetUsers(t *testing.T) {
 	var err error
 	var userArrayFirst, userArrayLast []User
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
-	testApi.Db.Raw("SELECT * FROM users WHERE deleted IS NULL").Scan(&userArrayFirst)
+	testAPI.DB.Raw("SELECT * FROM users WHERE deleted IS NULL").Scan(&userArrayFirst)
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/getUsers", nil)
@@ -26,7 +26,7 @@ func TestGetUsers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testApi.GetUsers(w, r)
+	testAPI.GetUsers(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
@@ -38,6 +38,9 @@ func TestGetUsers(t *testing.T) {
 
 	json.NewDecoder(w.Body).Decode(&userArrayLast)
 	lastBytes, err := json.Marshal(userArrayLast)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if !bytes.Equal(firstBytes, lastBytes) {
 		t.Error("error, not equal")
@@ -48,8 +51,8 @@ func TestInsertUsers(t *testing.T) {
 	var err error
 	var usersFromDb []User
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertUsers?first_name=TEST_NAME&second_name=TEST_SURNAME&date_of_birth=1900-01-21&role_id=777&password=password_test&login=TestUser", nil)
@@ -57,12 +60,12 @@ func TestInsertUsers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testApi.InsertUsers(w, r)
+	testAPI.InsertUsers(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	testApi.Db.Raw("SELECT * FROM users WHERE first_name = 'TEST_NAME' AND second_name = 'TEST_SURNAME' AND login = 'TestUser' AND deleted IS NULL").Scan(&usersFromDb)
+	testAPI.DB.Raw("SELECT * FROM users WHERE first_name = 'TEST_NAME' AND second_name = 'TEST_SURNAME' AND login = 'TestUser' AND deleted IS NULL").Scan(&usersFromDb)
 
 	if cap(usersFromDb) != 1 {
 		t.Error("too much rows found, capacity: ", cap(usersFromDb))
@@ -80,7 +83,7 @@ func TestInsertUsers(t *testing.T) {
 		t.Error("Wrong date_of_birth")
 	}
 
-	if usersFromDb[0].RoleId != 777 {
+	if usersFromDb[0].RoleID != 777 {
 		t.Error("Wrong role_id")
 	}
 
@@ -99,15 +102,15 @@ func TestInsertUsers(t *testing.T) {
 		t.Error("Wrong create time")
 	}
 
-	testApi.Db.Exec("DELETE FROM users WHERE first_name = 'TEST_NAME' AND second_name = 'TEST_SURNAME' AND login = 'TestUser'")
+	testAPI.DB.Exec("DELETE FROM users WHERE first_name = 'TEST_NAME' AND second_name = 'TEST_SURNAME' AND login = 'TestUser'")
 }
 
 func TestDeleteUsers(t *testing.T) {
 	var err error
 	var usersFromDb []User
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertUsers?first_name=TEST_NAME&second_name=TEST_SURNAME&date_of_birth=1900-01-21&role_id=777&password=password_test&login=TestUser", nil)
@@ -115,41 +118,41 @@ func TestDeleteUsers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testApi.InsertUsers(w, r)
+	testAPI.InsertUsers(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	testApi.Db.Raw("SELECT * FROM users WHERE role_id=777 AND deleted IS NULL").Scan(&usersFromDb)
+	testAPI.DB.Raw("SELECT * FROM users WHERE role_id=777 AND deleted IS NULL").Scan(&usersFromDb)
 	if cap(usersFromDb) != 1 {
 		t.Error("row didn't insert")
 	}
 
 	w = httptest.NewRecorder()
-	r, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/deleteUsers?id="+strconv.Itoa(usersFromDb[0].Id)+"", nil)
+	r, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/deleteUsers?id="+strconv.Itoa(usersFromDb[0].ID)+"", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testApi.DeleteUsers(w, r)
+	testAPI.DeleteUsers(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	testApi.Db.Raw("SELECT * FROM users WHERE role_id=777 AND deleted NOTNULL").Scan(&usersFromDb)
+	testAPI.DB.Raw("SELECT * FROM users WHERE role_id=777 AND deleted NOTNULL").Scan(&usersFromDb)
 	if cap(usersFromDb) != 1 {
 		t.Error("row didn't delete")
 	}
 
-	testApi.Db.Exec("DELETE FROM users WHERE role_id=777 AND deleted NOTNULL")
+	testAPI.DB.Exec("DELETE FROM users WHERE role_id=777 AND deleted NOTNULL")
 }
 
 func TestUpdateUsers(t *testing.T) {
 	var err error
 	var usersFromDb []User
 
-	initApi(&testApi, t)
-	defer testApi.Db.Close()
+	initAPI(&testAPI, t)
+	defer testAPI.DB.Close()
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/insertUsers?first_name=TEST_NAME&second_name=TEST_SURNAME&date_of_birth=1900-01-21&role_id=777&password=password_test&login=TestUser", nil)
@@ -157,28 +160,28 @@ func TestUpdateUsers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testApi.InsertUsers(w, r)
+	testAPI.InsertUsers(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	testApi.Db.Raw("SELECT * FROM users WHERE role_id=777 AND first_name = 'TEST_NAME' AND deleted IS NULL AND updated IS NULL").Scan(&usersFromDb)
+	testAPI.DB.Raw("SELECT * FROM users WHERE role_id=777 AND first_name = 'TEST_NAME' AND deleted IS NULL AND updated IS NULL").Scan(&usersFromDb)
 	if cap(usersFromDb) != 1 {
 		t.Error("row didn't insert")
 	}
 
 	w = httptest.NewRecorder()
-	r, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/updateUsers?id="+strconv.Itoa(usersFromDb[0].Id)+"&first_name=USER_N&second_name=USER_S&date_of_birth=1800-03-04&role_id=888&password=12344321qaz&login=TTT", nil)
+	r, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/updateUsers?id="+strconv.Itoa(usersFromDb[0].ID)+"&first_name=USER_N&second_name=USER_S&date_of_birth=1800-03-04&role_id=888&password=12344321qaz&login=TTT", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testApi.UpdateUsers(w, r)
+	testAPI.UpdateUsers(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
 
-	testApi.Db.Raw("SELECT * FROM users WHERE id=" + strconv.Itoa(usersFromDb[0].Id) + " AND updated NOTNULL").Scan(&usersFromDb)
+	testAPI.DB.Raw("SELECT * FROM users WHERE id=" + strconv.Itoa(usersFromDb[0].ID) + " AND updated NOTNULL").Scan(&usersFromDb)
 	if cap(usersFromDb) != 1 {
 		t.Error("row didn't update")
 	}
@@ -195,7 +198,7 @@ func TestUpdateUsers(t *testing.T) {
 		t.Error("Wrong updated date_of_birth")
 	}
 
-	if usersFromDb[0].RoleId != 888 {
+	if usersFromDb[0].RoleID != 888 {
 		t.Error("Wrong updated role_id")
 	}
 
@@ -214,5 +217,5 @@ func TestUpdateUsers(t *testing.T) {
 		t.Error("Wrong updated updated")
 	}
 
-	testApi.Db.Exec("DELETE FROM users WHERE id = " + strconv.Itoa(usersFromDb[0].Id) + " AND updated NOTNULL")
+	testAPI.DB.Exec("DELETE FROM users WHERE id = " + strconv.Itoa(usersFromDb[0].ID) + " AND updated NOTNULL")
 }

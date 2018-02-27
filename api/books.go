@@ -7,16 +7,18 @@ import (
 	"time"
 )
 
+//Book struct is struct for books table in db
 type Book struct {
-	Id      int       `gorm:"column:id;not null;type:integer"`
+	ID      int       `gorm:"column:id;not null;type:integer"`
 	Name    string    `gorm:"column:name;not null;type:text"`
 	Author  string    `gorm:"column:author;not null;type:text"`
-	UserId  int       `gorm:"column:user_id;not null;type:integer"`
+	UserID  int       `gorm:"column:user_id;not null;type:integer"`
 	Created time.Time `gorm:"column:created;type:date"`
 	Updated time.Time `gorm:"column:updated;type:date;default:''"`
 	Deleted time.Time `gorm:"column:deleted;type:date;default:''"`
 }
 
+//GetBooks func return to web books table data
 func (a *API) GetBooks(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -25,9 +27,12 @@ func (a *API) GetBooks(w http.ResponseWriter, r *http.Request) {
 
 	id := r.FormValue("id")
 	if id != "" {
-		bookTmp.Id, err = strconv.Atoi(id)
+		bookTmp.ID, err = strconv.Atoi(id)
 		if err != nil {
-			a.Log.Error("problem with convert string to int (id)")
+			a.Log.Error("problem with convert string to int (id) | Error: ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("ERROR"))
+			return
 		}
 	}
 
@@ -35,56 +40,68 @@ func (a *API) GetBooks(w http.ResponseWriter, r *http.Request) {
 
 	bookTmp.Author = r.FormValue("author")
 
-	uId := r.FormValue("user_id")
-	if uId != "" {
-		bookTmp.UserId, err = strconv.Atoi(uId)
+	uID := r.FormValue("user_id")
+	if uID != "" {
+		bookTmp.UserID, err = strconv.Atoi(uID)
 		if err != nil {
-			a.Log.Error("problem with convert string to int (user_id)")
+			a.Log.Error("problem with convert string to int (user_id) | Error: ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("ERROR"))
+			return
 		}
 	}
 
-	err = a.Db.Where(&bookTmp).Find(&books).Error
+	err = a.DB.Where(&bookTmp).Find(&books).Error
 	if err != nil {
 		a.Log.Error("Get query error | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: Get query error"))
+		w.Write([]byte("ERROR"))
 		return
 	}
 
 	json.NewEncoder(w).Encode(books)
 }
 
+//UpdateBooks func updates data in books table
 func (a *API) UpdateBooks(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	var bookTmp Book
 
 	id := r.FormValue("id")
-	bookTmp.Id, err = strconv.Atoi(id)
+	bookTmp.ID, err = strconv.Atoi(id)
 	if err != nil {
-		a.Log.Error("problem with convert string to int")
+		a.Log.Error("problem with convert string to int (id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
 	bookTmp.Name = r.FormValue("name")
 
 	bookTmp.Author = r.FormValue("author")
 
-	uId := r.FormValue("user_id")
-	bookTmp.UserId, err = strconv.Atoi(uId)
+	uID := r.FormValue("user_id")
+	bookTmp.UserID, err = strconv.Atoi(uID)
 	if err != nil {
-		a.Log.Error("problem with convert string to int")
+		a.Log.Error("problem with convert string to int (user_id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
 	bookTmp.Updated = time.Now()
 
-	err = a.Db.Model(&bookTmp).Updates(bookTmp).Error
+	err = a.DB.Model(&bookTmp).Updates(bookTmp).Error
 	if err != nil {
-		a.Log.Error("update query error | Query: ")
+		a.Log.Error("update query error | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: update query error | Query: "))
+		w.Write([]byte("ERROR"))
+		return
 	}
 }
 
+//InsertBooks func inserts data in books table
 func (a *API) InsertBooks(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -92,36 +109,41 @@ func (a *API) InsertBooks(w http.ResponseWriter, r *http.Request) {
 
 	tmpBooks.Name = r.FormValue("name")
 	tmpBooks.Author = r.FormValue("author")
-	tmpBooks.UserId, err = strconv.Atoi(r.FormValue("user_id"))
+	tmpBooks.UserID, err = strconv.Atoi(r.FormValue("user_id"))
 	if err != nil {
-		a.Log.Error("Insert query error")
+		a.Log.Error("problem with convert string to int (user_id) | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: parse iser_id error"))
+		w.Write([]byte("ERROR"))
 		return
 	}
 	tmpBooks.Created = time.Now()
 
-	err = a.Db.Create(&tmpBooks).Error
+	err = a.DB.Create(&tmpBooks).Error
 	if err != nil {
-		a.Log.Error("Insert query error")
+		a.Log.Error("Insert query error | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: Insert query error | Query: "))
+		w.Write([]byte("ERROR"))
+		return
 	}
 }
+
+//DeleteBooks func set delete column in books table for row
 func (a *API) DeleteBooks(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	id := r.FormValue("id")
 	if id == "" {
+		a.Log.Error("empty id")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("BAD REQUEST: empty id"))
+		w.Write([]byte("ERROR"))
 		return
 	}
 
-	err = a.Db.Exec("UPDATE books SET deleted = ? WHERE id = ?", time.Now().Format("2006-01-02"), id).Error
+	err = a.DB.Exec("UPDATE books SET deleted = ? WHERE id = ?", time.Now().Format("2006-01-02"), id).Error
 	if err != nil {
-		a.Log.Error("Delete query error! Query: ")
+		a.Log.Error("Delete query error! Error: ", err)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("BAD REQUEST: delete query error"))
+		w.Write([]byte("ERROR"))
+		return
 	}
 }

@@ -5,12 +5,18 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+//API struct than contain DB and Loger objects
 type API struct {
-	Db  *gorm.DB
+	DB  *gorm.DB
 	Log lumber.Logger
 }
 
-func (a *API) New(db *gorm.DB, log lumber.Logger) {
-	a.Db = db
-	a.Log = log
+//New return new API object
+func New(db *gorm.DB, log lumber.Logger) *API {
+	api := new(API)
+
+	api.DB = db
+	api.Log = log
+
+	return api
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
 	"github.com/jcelliott/lumber"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -28,7 +29,7 @@ func main() {
 		panic("Failed to create database connection")
 	}
 
-	mainAPI.New(db, loger)
+	api.New(db, loger)
 
 	defer db.Close()
 

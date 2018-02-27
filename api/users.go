@@ -9,12 +9,13 @@ import (
 	"time"
 )
 
+//User struct is struct for users table in db
 type User struct {
-	Id          int       `gorm:"column:id;not null;type:integer"`
+	ID          int       `gorm:"column:id;not null;type:integer"`
 	FirstName   string    `gorm:"column:first_name;not null;type:text"`
 	SecondName  string    `gorm:"column:second_name;not null;type:text"`
 	DateOfBirth time.Time `gorm:"column:date_of_birth;type:date"`
-	RoleId      int       `gorm:"column:role_id;not null;type:integer"`
+	RoleID      int       `gorm:"column:role_id;not null;type:integer"`
 	Created     time.Time `gorm:"column:created;type:date"`
 	Updated     time.Time `gorm:"column:updated;type:date;default:''"`
 	Deleted     time.Time `gorm:"column:created;type:date;default:''"`
@@ -22,6 +23,7 @@ type User struct {
 	Login       string    `gorm:"column:login;not null;type:text"`
 }
 
+//GetUsers func return to web users table data
 func (a *API) GetUsers(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -29,40 +31,50 @@ func (a *API) GetUsers(w http.ResponseWriter, r *http.Request) {
 	var userTmp User
 
 	id := r.FormValue("id")
-	userTmp.Id, err = strconv.Atoi(id)
+	userTmp.ID, err = strconv.Atoi(id)
 	if err != nil {
-		a.Log.Error("problem with convert string to int")
+		a.Log.Error("problem with convert string to int (id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
 	userTmp.FirstName = r.FormValue("first_name")
 
 	userTmp.SecondName = r.FormValue("second_name")
 
-	rId := r.FormValue("role_id")
-	userTmp.RoleId, err = strconv.Atoi(rId)
+	rID := r.FormValue("role_id")
+	userTmp.RoleID, err = strconv.Atoi(rID)
 	if err != nil {
-		a.Log.Error("problem with convert string to int")
+		a.Log.Error("problem with convert string to int (role_id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
-	err = a.Db.Where(&userTmp).Find(&users).Error
+	err = a.DB.Where(&userTmp).Find(&users).Error
 	if err != nil {
-		a.Log.Error("Get query error | Query: ")
+		a.Log.Error("Get query error | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: Get query error"))
+		w.Write([]byte("ERROR"))
 		return
 	}
 
 	json.NewEncoder(w).Encode(users)
 }
 
+//UpdateUsers func updates data in users table
 func (a *API) UpdateUsers(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	var userTmp User
 	id := r.FormValue("id")
-	userTmp.Id, err = strconv.Atoi(id)
+	userTmp.ID, err = strconv.Atoi(id)
 	if err != nil {
-		a.Log.Error("problem with convert string to int")
+		a.Log.Error("problem with convert string to int (id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
 	userTmp.FirstName = r.FormValue("first_name")
@@ -72,13 +84,19 @@ func (a *API) UpdateUsers(w http.ResponseWriter, r *http.Request) {
 	dofBTmp := r.FormValue("date_of_birth")
 	userTmp.DateOfBirth, err = time.Parse("2006-01-02", dofBTmp)
 	if err != nil {
-		a.Log.Error("problem with convert string to time.time")
+		a.Log.Error("problem with convert string to time.time (date_of_birth) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
-	rId := r.FormValue("role_id")
-	userTmp.RoleId, err = strconv.Atoi(rId)
+	rID := r.FormValue("role_id")
+	userTmp.RoleID, err = strconv.Atoi(rID)
 	if err != nil {
-		a.Log.Error("problem with convert string to int")
+		a.Log.Error("problem with convert string to int (role_id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
+		return
 	}
 
 	userTmp.Login = r.FormValue("login")
@@ -93,14 +111,16 @@ func (a *API) UpdateUsers(w http.ResponseWriter, r *http.Request) {
 
 	userTmp.Updated = time.Now()
 
-	err = a.Db.Model(&userTmp).Updates(userTmp).Error
+	err = a.DB.Model(&userTmp).Updates(userTmp).Error
 	if err != nil {
-		a.Log.Error("update query error | Query: ")
+		a.Log.Error("update query error | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: update query error"))
+		w.Write([]byte("ERROR"))
+		return
 	}
 }
 
+//InsertUsers func inserts data in users table
 func (a *API) InsertUsers(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -111,10 +131,17 @@ func (a *API) InsertUsers(w http.ResponseWriter, r *http.Request) {
 
 	tmpUsers.DateOfBirth, err = time.Parse("2006-01-02", r.FormValue("date_of_birth"))
 	if err != nil {
+		a.Log.Error("problem with convert string to time.time (date_of_birth) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
 		return
 	}
-	tmpUsers.RoleId, err = strconv.Atoi(r.FormValue("role_id"))
+
+	tmpUsers.RoleID, err = strconv.Atoi(r.FormValue("role_id"))
 	if err != nil {
+		a.Log.Error("problem with convert string to int (role_id) | Error: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("ERROR"))
 		return
 	}
 
@@ -126,29 +153,32 @@ func (a *API) InsertUsers(w http.ResponseWriter, r *http.Request) {
 
 	tmpUsers.Created = time.Now()
 
-	err = a.Db.Create(&tmpUsers).Error
+	err = a.DB.Create(&tmpUsers).Error
 	if err != nil {
-		a.Log.Error("Insert query error")
+		a.Log.Error("Insert query error | Error: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("BAD REQUEST: Insert query error | Query: "))
+		w.Write([]byte("ERROR"))
+		return
 	}
 }
 
+//DeleteUsers func set delete column in users table for row
 func (a *API) DeleteUsers(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	id := r.FormValue("id")
-
 	if id == "" {
+		a.Log.Error("Empty id")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("BAD REQUEST: empty id"))
+		w.Write([]byte("ERROR"))
 		return
 	}
 
-	err = a.Db.Exec("UPDATE users SET deleted = ? WHERE id = ? AND deleted IS NULL", time.Now().Format("2006-01-02"), id).Error
+	err = a.DB.Exec("UPDATE users SET deleted = ? WHERE id = ? AND deleted IS NULL", time.Now().Format("2006-01-02"), id).Error
 	if err != nil {
-		a.Log.Error("Delete query error! Query: ")
+		a.Log.Error("Delete query error | Error: ", err)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("BAD REQUEST: delete query error"))
+		w.Write([]byte("ERROR"))
+		return
 	}
 }

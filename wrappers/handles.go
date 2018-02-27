@@ -7,6 +7,7 @@ import (
 	"github.com/justinas/alice"
 )
 
+//HandleAll func is wrapper where makes all handle connection and middleware
 func HandleAll(api *api.API) {
 
 	wrapperLogOn := alice.New(api.ParseHandler)
